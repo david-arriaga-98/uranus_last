@@ -1,0 +1,1 @@
+{"version":3,"file":"ErrorMessage.js","sourceRoot":"","sources":["../../../src/Helpers/Petitions/ErrorMessage.ts"],"names":[],"mappings":";;AAAa,QAAA,cAAc,GAAG;IAC7B,UAAU,EAAE;QACX,MAAM,EAAE,OAAO;QACf,OAAO,EAAE,iCAAiC;KAC1C;IACD,gBAAgB,EAAE;QACjB,MAAM,EAAE,OAAO;QACf,OAAO,EAAE,oCAAoC;KAC7C;CACD,CAAC"}
