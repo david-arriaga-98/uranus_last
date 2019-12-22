@@ -40,9 +40,11 @@ export const registerUser = async (
 	req: Request,
 	res: Response
 ): Promise<void> => {
-	//Recogemos los datos por post
-	var { names, schedule, email } = req.body;
+	const admin = req.body.user;
+	console.log(admin);
 
+	//Recogemos los datos por post
+	var { names, schedule, email, type } = req.body;
 	//Validamos los datos
 	try {
 		var valSchedule: boolean =
@@ -65,29 +67,91 @@ export const registerUser = async (
 				});
 			} else {
 				var password: string = new Token(8).getUrlToken().toUpperCase();
-				//Generamos el objeto
-				const newUser: any = new User({
-					names,
-					email,
-					password,
-					schedule,
-					role: 'MASTER_ADMIN',
-					createdAt: moment(),
-					personalToken: new Token(60).getUrlToken()
-				});
+				//Creamos usuarios dependiendo del rango
+				if (admin.role === 'MASTER_ADMIN') {
+					//Va a crear solo administradores sin compañias
+					//---Creamos el objeto
+					const newUser = new User({
+						names,
+						email,
+						password,
+						schedule,
+						role: 'ROLE_ADMIN',
+						createdAt: moment(),
+						personalToken: new Token(60).getUrlToken()
+					});
+					saveUser(newUser, password);
+				} else if (admin.role === 'ROLE_ADMIN') {
+					if (admin.company === null) {
+						res.status(422).json({
+							status: 'error',
+							message: 'No has creado una compañía'
+						});
+					} else {
+						//Va a poder crear usuarios o administradores
 
-				//Hashear la password
-				newUser.password = await newUser.encryptPass(newUser.password);
-				//Guardamos al usuario en la base de datos
-				await newUser.save();
+						//---Validamos el tipo de usuario
+						var valType =
+							!validator.isEmpty(type) &&
+							validator.isInt(type) &&
+							type >= 0 &&
+							type <= 1;
 
-				//Enviamos un email
-				new SendMail().sendVerifyEmail(newUser, password);
+						if (valType) {
+							//1 para admin y 0 para usuario
+							if (type == 1) {
+								const newUser = new User({
+									names,
+									email,
+									password,
+									schedule,
+									role: 'ROLE_ADMIN',
+									company: admin.company,
+									createdAt: moment(),
+									personalToken: new Token(60).getUrlToken()
+								});
+								saveUser(newUser, password);
+							} else {
+								const newUser = new User({
+									names,
+									email,
+									password,
+									schedule,
+									role: 'ROLE_USER',
+									company: admin.company,
+									createdAt: moment(),
+									personalToken: new Token(60).getUrlToken()
+								});
+								saveUser(newUser, password);
+							}
+						} else {
+							res.status(422).json({
+								status: 'error',
+								message: 'Error, no se pudo crear el usuario'
+							});
+						}
+					}
+				} else {
+					res.status(422).json({
+						status: 'error',
+						message: 'Error, no puedes realizar estos cambios'
+					});
+				}
 
-				res.status(202).json({
-					status: 'success',
-					message: `El usuario con los nombres ${newUser.names} ha sido registrado satisfactoriamente`
-				});
+				async function saveUser(user: any, password: any) {
+					//Hashear la password
+					user.password = await user.encryptPass(user.password);
+					//Guardamos al usuario en la base de datos
+					await user.save();
+
+					//Enviamos un email
+					new SendMail().sendVerifyEmail(user, password);
+
+					res.status(202).json({
+						status: 'success',
+						message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+					});
+				}
 			}
 		} else {
 			res.status(422).json(errorPetitions.fieldError);

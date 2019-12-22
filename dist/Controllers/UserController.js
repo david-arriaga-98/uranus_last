@@ -44,8 +44,10 @@ exports.validateSchedule = (req, res) => __awaiter(void 0, void 0, void 0, funct
     catch (error) { }
 });
 exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const admin = req.body.user;
+    console.log(admin);
     //Recogemos los datos por post
-    var { names, schedule, email } = req.body;
+    var { names, schedule, email, type } = req.body;
     //Validamos los datos
     try {
         var valSchedule = !validator_1.default.isEmpty(schedule) &&
@@ -66,26 +68,92 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
             else {
                 var password = new getToken_1.default(8).getUrlToken().toUpperCase();
-                //Generamos el objeto
-                const newUser = new User_1.User({
-                    names,
-                    email,
-                    password,
-                    schedule,
-                    role: 'MASTER_ADMIN',
-                    createdAt: moment_1.default(),
-                    personalToken: new getToken_1.default(60).getUrlToken()
-                });
-                //Hashear la password
-                newUser.password = yield newUser.encryptPass(newUser.password);
-                //Guardamos al usuario en la base de datos
-                yield newUser.save();
-                //Enviamos un email
-                new sendEmail_1.default().sendVerifyEmail(newUser, password);
-                res.status(202).json({
-                    status: 'success',
-                    message: `El usuario con los nombres ${newUser.names} ha sido registrado satisfactoriamente`
-                });
+                //Creamos usuarios dependiendo del rango
+                if (admin.role === 'MASTER_ADMIN') {
+                    //Va a crear solo administradores sin compañias
+                    //---Creamos el objeto
+                    const newUser = new User_1.User({
+                        names,
+                        email,
+                        password,
+                        schedule,
+                        role: 'ROLE_ADMIN',
+                        createdAt: moment_1.default(),
+                        personalToken: new getToken_1.default(60).getUrlToken()
+                    });
+                    saveUser(newUser, password);
+                }
+                else if (admin.role === 'ROLE_ADMIN') {
+                    if (admin.company === null) {
+                        res.status(422).json({
+                            status: 'error',
+                            message: 'No has creado una compañía'
+                        });
+                    }
+                    else {
+                        //Va a poder crear usuarios o administradores
+                        //---Validamos el tipo de usuario
+                        var valType = !validator_1.default.isEmpty(type) &&
+                            validator_1.default.isInt(type) &&
+                            type >= 0 &&
+                            type <= 1;
+                        if (valType) {
+                            //1 para admin y 0 para usuario
+                            if (type == 1) {
+                                const newUser = new User_1.User({
+                                    names,
+                                    email,
+                                    password,
+                                    schedule,
+                                    role: 'ROLE_ADMIN',
+                                    company: admin.company,
+                                    createdAt: moment_1.default(),
+                                    personalToken: new getToken_1.default(60).getUrlToken()
+                                });
+                                saveUser(newUser, password);
+                            }
+                            else {
+                                const newUser = new User_1.User({
+                                    names,
+                                    email,
+                                    password,
+                                    schedule,
+                                    role: 'ROLE_USER',
+                                    company: admin.company,
+                                    createdAt: moment_1.default(),
+                                    personalToken: new getToken_1.default(60).getUrlToken()
+                                });
+                                saveUser(newUser, password);
+                            }
+                        }
+                        else {
+                            res.status(422).json({
+                                status: 'error',
+                                message: 'Error, no se pudo crear el usuario'
+                            });
+                        }
+                    }
+                }
+                else {
+                    res.status(422).json({
+                        status: 'error',
+                        message: 'Error, no puedes realizar estos cambios'
+                    });
+                }
+                function saveUser(user, password) {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        //Hashear la password
+                        user.password = yield user.encryptPass(user.password);
+                        //Guardamos al usuario en la base de datos
+                        yield user.save();
+                        //Enviamos un email
+                        new sendEmail_1.default().sendVerifyEmail(user, password);
+                        res.status(202).json({
+                            status: 'success',
+                            message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+                        });
+                    });
+                }
             }
         }
         else {

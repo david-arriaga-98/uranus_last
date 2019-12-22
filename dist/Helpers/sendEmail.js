@@ -24,10 +24,10 @@ class SendMail {
                 const html = `
                 <p>Bienvenido <strong>${user.names}</strong> :)</p> </br>
                 <p>Preciona el link, para verificar tu cuenta:</p> </br>
-                <a href="http://localhost:8000/api/user/verify/${user.personalToken}" target="_blank">Da click Aquí</a> </br>
+                <a href="https://api.uranus-application.me/user/verify/${user.personalToken}" target="_blank">Da click Aquí</a> </br>
                 <p>Y su contraseña provisional es: ${password}</p></br>
                 <p>Si el botón no funciona, copia y pega lo siguiente:</p></br>
-                <p>http://localhost:8000/api/user/verify/${user.personalToken}</p>
+                <p>https://api.uranus-application.me/user/verify/${user.personalToken}</p>
             `;
                 const msg = {
                     to: user.email,
