@@ -206,7 +206,7 @@ exports.activateAccount = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     //Recibimos los datos
     var { credential, password } = req.body;
-    //Validamos los datos
+    var applicationCode = req.params.code;
     try {
         var valCredetial = !validator_1.default.isEmpty(credential);
         var valPassword = !validator_1.default.isEmpty(password);
@@ -232,23 +232,45 @@ exports.loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     //Comparamos la contraseña
                     const verifyPass = yield user.decryptPass(password);
                     if (verifyPass) {
-                        //Si es verdadero, entonces generamos el token
+                        //Aquí validamos si esta mandando una application code o no
                         var token = new Authorization_1.default(user).generateUserToken();
-                        //Eliminamos cosas sencibles
-                        user.password = undefined;
-                        user.state = undefined;
-                        user.createdAt = undefined;
-                        user.updatedAt = undefined;
-                        user.email = undefined;
-                        user.schedule = undefined;
-                        user.personalToken = undefined;
-                        user.company = undefined;
-                        //Retornamos el token
-                        res.status(202).json({
-                            status: 'success',
-                            token,
-                            user
-                        });
+                        if (applicationCode != undefined) {
+                            //Validamos que la clave y la clave enviada sean las mismas
+                            var code = process.env.APPLICATION_CODE;
+                            if (applicationCode === code) {
+                                //Aqui generamos todo el usuario
+                                user.password = undefined;
+                                //Retornamos el token y el usuario
+                                res.status(202).json({
+                                    status: 'success',
+                                    token,
+                                    user
+                                });
+                            }
+                            else {
+                                res.status(422).json({
+                                    status: 'error',
+                                    message: 'La clave de acceso es incorrecta'
+                                });
+                            }
+                        }
+                        else {
+                            //Aqui generamos parte del usuario
+                            user.password = undefined;
+                            user.state = undefined;
+                            user.createdAt = undefined;
+                            user.updatedAt = undefined;
+                            user.email = undefined;
+                            user.schedule = undefined;
+                            user.personalToken = undefined;
+                            user.company = undefined;
+                            //Retornamos el token y el usuario
+                            res.status(202).json({
+                                status: 'success',
+                                token,
+                                user
+                            });
+                        }
                     }
                     else {
                         res.status(400).json(ErrorMessage_1.errorPetitions.credentialsError);
@@ -257,6 +279,53 @@ exports.loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             }
             else {
                 res.status(400).json(ErrorMessage_1.errorPetitions.credentialsError);
+            }
+        }
+        else {
+            res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+        }
+    }
+    catch (error) {
+        res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+    }
+});
+exports.recoveryPass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //Recogemos los datos por post
+    var { credential } = req.body;
+    //Buscamos al usuario en la base de datos
+    try {
+        var valCredetial = !validator_1.default.isEmpty(credential);
+        if (valCredetial) {
+            //Bucamos al usuario en la base de datos
+            const user = yield User_1.User.findOne({
+                $or: [{ email: credential }, { schedule: credential }]
+            });
+            if (user) {
+                //Validamos que el usuario no este baneado ni tenga la cuenta inactiva
+                if (user.state === false) {
+                    res.status(422).json({
+                        status: 'error',
+                        message: 'El usuario no ha activado su cuenta, verifique su correo'
+                    });
+                }
+                else if (user.role === 'USER_BANNED') {
+                    res.status(422).json({
+                        status: 'error',
+                        message: 'Usuario baneado'
+                    });
+                }
+                else {
+                    res.status(201).json({
+                        status: 'error',
+                        message: 'Se ha enviado a su correo satisfactoriamente'
+                    });
+                }
+            }
+            else {
+                res.status(404).json({
+                    status: 'error',
+                    message: 'El usuario no existe'
+                });
             }
         }
         else {

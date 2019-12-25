@@ -207,8 +207,8 @@ export const activateAccount = async (
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
 	//Recibimos los datos
 	var { credential, password } = req.body;
+	var applicationCode: string = req.params.code;
 
-	//Validamos los datos
 	try {
 		var valCredetial = !validator.isEmpty(credential);
 		var valPassword = !validator.isEmpty(password);
@@ -235,30 +235,98 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 					const verifyPass: boolean = await user.decryptPass(password);
 
 					if (verifyPass) {
-						//Si es verdadero, entonces generamos el token
+						//Aquí validamos si esta mandando una application code o no
+
 						var token = new Authorization(user).generateUserToken();
 
-						//Eliminamos cosas sencibles
-						user.password = undefined;
-						user.state = undefined;
-						user.createdAt = undefined;
-						user.updatedAt = undefined;
-						user.email = undefined;
-						user.schedule = undefined;
-						user.personalToken = undefined;
-						user.company = undefined;
-						//Retornamos el token
-						res.status(202).json({
-							status: 'success',
-							token,
-							user
-						});
+						if (applicationCode != undefined) {
+							//Validamos que la clave y la clave enviada sean las mismas
+							var code: any = process.env.APPLICATION_CODE;
+							if (applicationCode === code) {
+								//Aqui generamos todo el usuario
+								user.password = undefined;
+								//Retornamos el token y el usuario
+								res.status(202).json({
+									status: 'success',
+									token,
+									user
+								});
+							} else {
+								res.status(422).json({
+									status: 'error',
+									message: 'La clave de acceso es incorrecta'
+								});
+							}
+						} else {
+							//Aqui generamos parte del usuario
+							user.password = undefined;
+							user.state = undefined;
+							user.createdAt = undefined;
+							user.updatedAt = undefined;
+							user.email = undefined;
+							user.schedule = undefined;
+							user.personalToken = undefined;
+							user.company = undefined;
+							//Retornamos el token y el usuario
+							res.status(202).json({
+								status: 'success',
+								token,
+								user
+							});
+						}
 					} else {
 						res.status(400).json(errorPetitions.credentialsError);
 					}
 				}
 			} else {
 				res.status(400).json(errorPetitions.credentialsError);
+			}
+		} else {
+			res.status(422).json(errorPetitions.fieldError);
+		}
+	} catch (error) {
+		res.status(422).json(errorPetitions.fieldError);
+	}
+};
+
+export const recoveryPass = async (
+	req: Request,
+	res: Response
+): Promise<void> => {
+	//Recogemos los datos por post
+	var { credential } = req.body;
+	//Buscamos al usuario en la base de datos
+	try {
+		var valCredetial: boolean = !validator.isEmpty(credential);
+
+		if (valCredetial) {
+			//Bucamos al usuario en la base de datos
+			const user: any = await User.findOne({
+				$or: [{ email: credential }, { schedule: credential }]
+			});
+			if (user) {
+				//Validamos que el usuario no este baneado ni tenga la cuenta inactiva
+				if (user.state === false) {
+					res.status(422).json({
+						status: 'error',
+						message: 'El usuario no ha activado su cuenta, verifique su correo'
+					});
+				} else if (user.role === 'USER_BANNED') {
+					res.status(422).json({
+						status: 'error',
+						message: 'Usuario baneado'
+					});
+				} else {
+					res.status(201).json({
+						status: 'error',
+						message: 'Se ha enviado a su correo satisfactoriamente'
+					});
+				}
+			} else {
+				res.status(404).json({
+					status: 'error',
+					message: 'El usuario no existe'
+				});
 			}
 		} else {
 			res.status(422).json(errorPetitions.fieldError);

@@ -9,12 +9,13 @@ import { AdminMD } from '../Middlewares/AdminMD';
 import {
 	registerUser,
 	loginUser,
-	activateAccount
+	activateAccount,
+	recoveryPass
 } from '../Controllers/UserController';
 
 router.post('/user/register', AdminMD, registerUser);
-router.post('/user/login', loginUser);
-
+router.post('/user/login/:code?', loginUser);
+router.post('/user/recovery', recoveryPass);
 router.get('/user/verify/:token', activateAccount);
 
 export default router;
