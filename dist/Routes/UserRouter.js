@@ -10,5 +10,6 @@ router.post('/user/register', AdminMD_1.AdminMD, UserController_1.registerUser);
 router.post('/user/login/:code?', UserController_1.loginUser);
 router.post('/user/recovery', UserController_1.recoveryPass);
 router.get('/user/verify/:token', UserController_1.activateAccount);
+router.post('/user/change/pass', UserController_1.changePass);
 exports.default = router;
 //# sourceMappingURL=UserRouter.js.map

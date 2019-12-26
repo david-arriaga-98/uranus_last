@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import validator from 'validator';
 import moment from 'moment';
+import jwt from 'jwt-simple';
 
 import { User } from '../Models/User';
 
@@ -320,6 +321,81 @@ export const recoveryPass = async (
 					res.status(201).json({
 						status: 'error',
 						message: 'Se ha enviado a su correo satisfactoriamente'
+					});
+				}
+			} else {
+				res.status(404).json({
+					status: 'error',
+					message: 'El usuario no existe'
+				});
+			}
+		} else {
+			res.status(422).json(errorPetitions.fieldError);
+		}
+	} catch (error) {
+		res.status(422).json(errorPetitions.fieldError);
+	}
+};
+
+export const changePass = async (req: Request, res: Response) => {
+	//Recogemos los datos
+	var { password, newPass, passwordConf } = req.body;
+	var token: any = req.headers.authorization;
+
+	//Validamos los datos
+	try {
+		var valpass = !validator.isEmpty(password);
+		var valNewPass =
+			!validator.isEmpty(newPass) &&
+			validator.isLength(newPass, { min: 8, max: 255 });
+		var valPassConf =
+			!validator.isEmpty(passwordConf) &&
+			validator.isLength(passwordConf, { min: 8, max: 255 });
+		var valToken = !validator.isEmpty(token) && validator.isJWT(token);
+
+		if (valpass && valNewPass && valPassConf && valToken) {
+			//Descomponemos el token
+			var key: any = process.env.TOKEN_KEY;
+			const user = jwt.decode(token, key);
+
+			//Buscamos al usuario en la base de datos
+			const findUser: any = await User.findById(user.sub);
+			if (findUser) {
+				//Validamos que la contraseña sea correcta
+				const verifyPass: boolean = await findUser.decryptPass(password);
+				if (verifyPass) {
+					//Si la contraseña esta bien vamos a generar una nueva
+					if (newPass === passwordConf) {
+						//Verificamos si la password no es igual a la anterior
+						const verifyNewPass: boolean = await findUser.decryptPass(newPass);
+						if (verifyNewPass) {
+							res.status(400).json({
+								status: 'error',
+								message: 'Esta contraseña ya está en uso en este momento'
+							});
+						} else {
+							//Hasheamos la password
+							var newPassword: any = await findUser.encryptPass(newPass);
+							//Actualizamos el usuario
+							await User.findByIdAndUpdate(findUser._id, {
+								password: newPassword,
+								updatedAt: moment()
+							});
+							res.status(201).json({
+								status: 'success',
+								message: 'Contraseña actualizada satisfactoriamente'
+							});
+						}
+					} else {
+						res.status(422).json({
+							status: 'error',
+							message: 'Las contraseñas no coinciden'
+						});
+					}
+				} else {
+					res.status(422).json({
+						status: 'error',
+						message: 'La contraseña es incorrecta'
 					});
 				}
 			} else {

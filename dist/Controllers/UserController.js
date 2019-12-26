@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const validator_1 = __importDefault(require("validator"));
 const moment_1 = __importDefault(require("moment"));
+const jwt_simple_1 = __importDefault(require("jwt-simple"));
 const User_1 = require("../Models/User");
 const getToken_1 = __importDefault(require("../Helpers/getToken"));
 const sendEmail_1 = __importDefault(require("../Helpers/sendEmail"));
@@ -318,6 +319,81 @@ exports.recoveryPass = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     res.status(201).json({
                         status: 'error',
                         message: 'Se ha enviado a su correo satisfactoriamente'
+                    });
+                }
+            }
+            else {
+                res.status(404).json({
+                    status: 'error',
+                    message: 'El usuario no existe'
+                });
+            }
+        }
+        else {
+            res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+        }
+    }
+    catch (error) {
+        res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+    }
+});
+exports.changePass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //Recogemos los datos
+    var { password, newPass, passwordConf } = req.body;
+    var token = req.headers.authorization;
+    //Validamos los datos
+    try {
+        var valpass = !validator_1.default.isEmpty(password);
+        var valNewPass = !validator_1.default.isEmpty(newPass) &&
+            validator_1.default.isLength(newPass, { min: 8, max: 255 });
+        var valPassConf = !validator_1.default.isEmpty(passwordConf) &&
+            validator_1.default.isLength(passwordConf, { min: 8, max: 255 });
+        var valToken = !validator_1.default.isEmpty(token) && validator_1.default.isJWT(token);
+        if (valpass && valNewPass && valPassConf && valToken) {
+            //Descomponemos el token
+            var key = process.env.TOKEN_KEY;
+            const user = jwt_simple_1.default.decode(token, key);
+            //Buscamos al usuario en la base de datos
+            const findUser = yield User_1.User.findById(user.sub);
+            if (findUser) {
+                //Validamos que la contraseña sea correcta
+                const verifyPass = yield findUser.decryptPass(password);
+                if (verifyPass) {
+                    //Si la contraseña esta bien vamos a generar una nueva
+                    if (newPass === passwordConf) {
+                        //Verificamos si la password no es igual a la anterior
+                        const verifyNewPass = yield findUser.decryptPass(newPass);
+                        if (verifyNewPass) {
+                            res.status(400).json({
+                                status: 'error',
+                                message: 'Esta contraseña ya está en uso en este momento'
+                            });
+                        }
+                        else {
+                            //Hasheamos la password
+                            var newPassword = yield findUser.encryptPass(newPass);
+                            //Actualizamos el usuario
+                            yield User_1.User.findByIdAndUpdate(findUser._id, {
+                                password: newPassword,
+                                updatedAt: moment_1.default()
+                            });
+                            res.status(201).json({
+                                status: 'success',
+                                message: 'Contraseña actualizada satisfactoriamente'
+                            });
+                        }
+                    }
+                    else {
+                        res.status(422).json({
+                            status: 'error',
+                            message: 'Las contraseñas no coinciden'
+                        });
+                    }
+                }
+                else {
+                    res.status(422).json({
+                        status: 'error',
+                        message: 'La contraseña es incorrecta'
                     });
                 }
             }

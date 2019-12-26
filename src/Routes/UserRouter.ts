@@ -10,12 +10,15 @@ import {
 	registerUser,
 	loginUser,
 	activateAccount,
-	recoveryPass
+	recoveryPass,
+	changePass
 } from '../Controllers/UserController';
 
 router.post('/user/register', AdminMD, registerUser);
 router.post('/user/login/:code?', loginUser);
 router.post('/user/recovery', recoveryPass);
 router.get('/user/verify/:token', activateAccount);
+
+router.post('/user/change/pass', changePass);
 
 export default router;
