@@ -11,10 +11,12 @@ import {
 	loginUser,
 	activateAccount,
 	recoveryPass,
-	changePass
+	changePass,
+	validateSchedule
 } from '../Controllers/UserController';
 
 router.post('/user/register', AdminMD, registerUser);
+router.post('/user/validate/schedule', AdminMD, validateSchedule);
 router.post('/user/login/:code?', loginUser);
 router.post('/user/recovery', recoveryPass);
 router.get('/user/verify/:token', activateAccount);

@@ -9,6 +9,7 @@ import Token from '../Helpers/getToken';
 import SendMail from '../Helpers/sendEmail';
 import { errorPetitions } from '../Helpers/Petitions/ErrorMessage';
 import Authorization from '../Helpers/Authorization';
+import FindSchedule from '../Helpers/FindUserBySchedule';
 
 export const validateSchedule = async (
 	req: Request,
@@ -17,11 +18,13 @@ export const validateSchedule = async (
 	//Recogemos la cédula
 	var { schedule } = req.body;
 	//Validamos la cédula
+
 	try {
 		var valSchedule: boolean =
 			!validator.isEmpty(schedule) &&
 			validator.isLength(schedule, { min: 10, max: 10 }) &&
 			validator.isInt(schedule);
+
 		if (valSchedule) {
 			//Validamos que no exista la cedula en la base de datos
 			const user: any = await User.findOne({ $and: [{ schedule }] });
@@ -31,10 +34,23 @@ export const validateSchedule = async (
 					message: 'Ya existe un usuario con esta cédula'
 				});
 			} else {
-				//Hacemos una busqueda por medio del api
+				/*/Hacemos una busqueda por medio del api
+				var findUser = new FindSchedule(schedule);
+				var response = await findUser.findUser();
+				res.status(response.code).json(response);*/
+				res.status(200).json({
+					status: 'success',
+					user: {
+						name: 'ARRIAGA AVILEZ BRAYAN DAVID'
+					}
+				});
 			}
+		} else {
+			res.status(422).json(errorPetitions.fieldError);
 		}
-	} catch (error) {}
+	} catch (error) {
+		res.status(422).json(errorPetitions.fieldError);
+	}
 };
 
 export const registerUser = async (
@@ -42,7 +58,6 @@ export const registerUser = async (
 	res: Response
 ): Promise<void> => {
 	const admin = req.body.user;
-	console.log(admin);
 
 	//Recogemos los datos por post
 	var { names, schedule, email, type } = req.body;

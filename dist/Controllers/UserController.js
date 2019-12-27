@@ -38,15 +38,28 @@ exports.validateSchedule = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 });
             }
             else {
-                //Hacemos una busqueda por medio del api
+                /*/Hacemos una busqueda por medio del api
+                var findUser = new FindSchedule(schedule);
+                var response = await findUser.findUser();
+                res.status(response.code).json(response);*/
+                res.status(200).json({
+                    status: 'success',
+                    user: {
+                        name: 'ARRIAGA AVILEZ BRAYAN DAVID'
+                    }
+                });
             }
         }
+        else {
+            res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+        }
     }
-    catch (error) { }
+    catch (error) {
+        res.status(422).json(ErrorMessage_1.errorPetitions.fieldError);
+    }
 });
 exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const admin = req.body.user;
-    console.log(admin);
     //Recogemos los datos por post
     var { names, schedule, email, type } = req.body;
     //Validamos los datos

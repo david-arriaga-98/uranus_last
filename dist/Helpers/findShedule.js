@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-class FindSchedule {
+class findSchedule {
     constructor(schedule) {
         this.schedule = schedule;
     }
-    findUserBySchedule() { }
+    findUserBySchedule() {
+        console.log('la cedula es: ', this.schedule);
+    }
 }
-exports.FindSchedule = FindSchedule;
-//# sourceMappingURL=findShedule.js.map
+exports.findSchedule = findSchedule;
+//# sourceMappingURL=FindShedule.js.map
