@@ -1,12 +1,13 @@
 import app from './app';
+import SocketIO from 'socket.io';
+import http from 'http';
 
-async function main() {
-	try {
-		await app.listen(app.get('port'));
-		console.log('Server on port:', app.get('port'));
-	} catch (error) {
-		console.log('Error in the server:', error);
-	}
-}
+const server = http.createServer(app);
+const io = SocketIO(server);
 
-main();
+import { socket } from './Sockets';
+socket(io);
+
+server.listen(app.get('port'), () => {
+	console.log('Socket on port', app.get('port'));
+});

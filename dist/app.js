@@ -22,6 +22,10 @@ app.use(express_1.default.json());
 //Routes
 const UserRouter_1 = __importDefault(require("./Routes/UserRouter"));
 app.use(UserRouter_1.default);
+const CompanyRoutes_1 = __importDefault(require("./Routes/CompanyRoutes"));
+app.use(CompanyRoutes_1.default);
+const VehicleRoutes_1 = __importDefault(require("./Routes/VehicleRoutes"));
+app.use(VehicleRoutes_1.default);
 //Export this module
 exports.default = app;
 //# sourceMappingURL=app.js.map

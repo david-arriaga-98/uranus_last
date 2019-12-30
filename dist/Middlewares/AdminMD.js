@@ -18,12 +18,12 @@ const User_1 = require("../Models/User");
 exports.AdminMD = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     //Recogemos el token recibido
     var token = req.headers.authorization;
-    //Limpiamos el token
-    token = token.replace(/['"]+/g, '');
     //Validamos el token
     try {
         var valToken = !validator_1.default.isEmpty(token) && validator_1.default.isJWT(token);
         if (valToken) {
+            //Limpiamos el token
+            token = token.replace(/['"]+/g, '');
             //Decodificamos el token
             const key = process.env.TOKEN_KEY;
             const tokenValidate = jwt_simple_1.default.decode(token, key);

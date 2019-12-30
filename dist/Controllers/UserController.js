@@ -16,6 +16,7 @@ const validator_1 = __importDefault(require("validator"));
 const moment_1 = __importDefault(require("moment"));
 const jwt_simple_1 = __importDefault(require("jwt-simple"));
 const User_1 = require("../Models/User");
+const Company_1 = require("../Models/Company");
 const getToken_1 = __importDefault(require("../Helpers/getToken"));
 const sendEmail_1 = __importDefault(require("../Helpers/sendEmail"));
 const ErrorMessage_1 = require("../Helpers/Petitions/ErrorMessage");
@@ -62,11 +63,12 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
     const admin = req.body.user;
     //Recogemos los datos por post
     var { names, schedule, email, type } = req.body;
-    //Validamos los datos
     try {
         var valSchedule = !validator_1.default.isEmpty(schedule) &&
             validator_1.default.isLength(schedule, { min: 10, max: 10 }) &&
-            validator_1.default.isInt(schedule);
+            validator_1.default.isInt(schedule) &&
+            schedule[0] > -1 &&
+            schedule[0] < 3;
         var valEmail = !validator_1.default.isEmpty(email) && validator_1.default.isEmail(email);
         var valNames = !validator_1.default.isEmpty(names);
         if (valSchedule && valEmail && valNames) {
@@ -98,7 +100,7 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     saveUser(newUser, password);
                 }
                 else if (admin.role === 'ROLE_ADMIN') {
-                    if (admin.company === null) {
+                    if (admin.company === null || admin.companyState === null) {
                         res.status(422).json({
                             status: 'error',
                             message: 'No has creado una compañía'
@@ -122,7 +124,8 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                                     role: 'ROLE_ADMIN',
                                     company: admin.company,
                                     createdAt: moment_1.default(),
-                                    personalToken: new getToken_1.default(60).getUrlToken()
+                                    personalToken: new getToken_1.default(60).getUrlToken(),
+                                    companyState: admin.companyState
                                 });
                                 saveUser(newUser, password);
                             }
@@ -135,7 +138,8 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                                     role: 'ROLE_USER',
                                     company: admin.company,
                                     createdAt: moment_1.default(),
-                                    personalToken: new getToken_1.default(60).getUrlToken()
+                                    personalToken: new getToken_1.default(60).getUrlToken(),
+                                    companyState: admin.companyState
                                 });
                                 saveUser(newUser, password);
                             }
@@ -158,14 +162,41 @@ exports.registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     return __awaiter(this, void 0, void 0, function* () {
                         //Hashear la password
                         user.password = yield user.encryptPass(user.password);
-                        //Guardamos al usuario en la base de datos
-                        yield user.save();
-                        //Enviamos un email
-                        new sendEmail_1.default().sendVerifyEmail(user, password);
-                        res.status(202).json({
-                            status: 'success',
-                            message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
-                        });
+                        //Actualizamos el usuario en la compañia
+                        if (admin.company != null && admin.role != 'MASTER_ADMIN') {
+                            //Buscamos la compañia
+                            const company = yield Company_1.Company.findById(admin.company);
+                            if (company) {
+                                //Actualizamos en la compañía
+                                yield Company_1.Company.findByIdAndUpdate(company._id, {
+                                    $push: { users: user._id }
+                                });
+                                //Guardamos al usuario en la base de datos
+                                yield user.save();
+                                //Enviamos un email
+                                new sendEmail_1.default().sendVerifyEmail(user, password);
+                                res.status(202).json({
+                                    status: 'success',
+                                    message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+                                });
+                            }
+                            else {
+                                res.status(404).json({
+                                    status: 'error',
+                                    message: 'Ha ocurrido un error, la compañía no existe'
+                                });
+                            }
+                        }
+                        else {
+                            //Guardamos al usuario en la base de datos
+                            yield user.save();
+                            //Enviamos un email
+                            new sendEmail_1.default().sendVerifyEmail(user, password);
+                            res.status(202).json({
+                                status: 'success',
+                                message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+                            });
+                        }
                     });
                 }
             }

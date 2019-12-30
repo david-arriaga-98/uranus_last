@@ -22,6 +22,10 @@ app.use(express.json());
 //Routes
 import UserRouter from './Routes/UserRouter';
 app.use(UserRouter);
+import CompanyRouter from './Routes/CompanyRoutes';
+app.use(CompanyRouter);
+import VehicleRouter from './Routes/VehicleRoutes';
+app.use(VehicleRouter);
 
 //Export this module
 export default app;

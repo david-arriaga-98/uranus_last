@@ -4,6 +4,7 @@ import moment from 'moment';
 import jwt from 'jwt-simple';
 
 import { User } from '../Models/User';
+import { Company } from '../Models/Company';
 
 import Token from '../Helpers/getToken';
 import SendMail from '../Helpers/sendEmail';
@@ -61,12 +62,13 @@ export const registerUser = async (
 
 	//Recogemos los datos por post
 	var { names, schedule, email, type } = req.body;
-	//Validamos los datos
 	try {
 		var valSchedule: boolean =
 			!validator.isEmpty(schedule) &&
 			validator.isLength(schedule, { min: 10, max: 10 }) &&
-			validator.isInt(schedule);
+			validator.isInt(schedule) &&
+			schedule[0] > -1 &&
+			schedule[0] < 3;
 		var valEmail: boolean =
 			!validator.isEmpty(email) && validator.isEmail(email);
 		var valNames: boolean = !validator.isEmpty(names);
@@ -98,7 +100,7 @@ export const registerUser = async (
 					});
 					saveUser(newUser, password);
 				} else if (admin.role === 'ROLE_ADMIN') {
-					if (admin.company === null) {
+					if (admin.company === null || admin.companyState === null) {
 						res.status(422).json({
 							status: 'error',
 							message: 'No has creado una compañía'
@@ -124,7 +126,8 @@ export const registerUser = async (
 									role: 'ROLE_ADMIN',
 									company: admin.company,
 									createdAt: moment(),
-									personalToken: new Token(60).getUrlToken()
+									personalToken: new Token(60).getUrlToken(),
+									companyState: admin.companyState
 								});
 								saveUser(newUser, password);
 							} else {
@@ -136,7 +139,8 @@ export const registerUser = async (
 									role: 'ROLE_USER',
 									company: admin.company,
 									createdAt: moment(),
-									personalToken: new Token(60).getUrlToken()
+									personalToken: new Token(60).getUrlToken(),
+									companyState: admin.companyState
 								});
 								saveUser(newUser, password);
 							}
@@ -157,16 +161,42 @@ export const registerUser = async (
 				async function saveUser(user: any, password: any) {
 					//Hashear la password
 					user.password = await user.encryptPass(user.password);
-					//Guardamos al usuario en la base de datos
-					await user.save();
 
-					//Enviamos un email
-					new SendMail().sendVerifyEmail(user, password);
+					//Actualizamos el usuario en la compañia
+					if (admin.company != null && admin.role != 'MASTER_ADMIN') {
+						//Buscamos la compañia
+						const company = await Company.findById(admin.company);
+						if (company) {
+							//Actualizamos en la compañía
+							await Company.findByIdAndUpdate(company._id, {
+								$push: { users: user._id }
+							});
+							//Guardamos al usuario en la base de datos
+							await user.save();
 
-					res.status(202).json({
-						status: 'success',
-						message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
-					});
+							//Enviamos un email
+							new SendMail().sendVerifyEmail(user, password);
+							res.status(202).json({
+								status: 'success',
+								message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+							});
+						} else {
+							res.status(404).json({
+								status: 'error',
+								message: 'Ha ocurrido un error, la compañía no existe'
+							});
+						}
+					} else {
+						//Guardamos al usuario en la base de datos
+						await user.save();
+
+						//Enviamos un email
+						new SendMail().sendVerifyEmail(user, password);
+						res.status(202).json({
+							status: 'success',
+							message: `El usuario con los nombres ${user.names} ha sido registrado satisfactoriamente`
+						});
+					}
 				}
 			}
 		} else {

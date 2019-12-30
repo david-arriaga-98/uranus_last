@@ -11,12 +11,12 @@ export const AdminMD = async (
 ): Promise<void> => {
 	//Recogemos el token recibido
 	var token: any = req.headers.authorization;
-	//Limpiamos el token
-	token = token.replace(/['"]+/g, '');
 	//Validamos el token
 	try {
 		var valToken = !validator.isEmpty(token) && validator.isJWT(token);
 		if (valToken) {
+			//Limpiamos el token
+			token = token.replace(/['"]+/g, '');
 			//Decodificamos el token
 			const key: any = process.env.TOKEN_KEY;
 			const tokenValidate = jwt.decode(token, key);
