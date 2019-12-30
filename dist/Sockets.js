@@ -13,7 +13,7 @@ const VehicleSocketsController_1 = require("./Controllers/Vehicle/VehicleSockets
 function socket(io) {
     io.on('connection', (socket) => {
         var intervals = setInterval(() => __awaiter(this, void 0, void 0, function* () {
-            io.emit('coords', yield VehicleSocketsController_1.getCoords());
+            socket.emit('coords', yield VehicleSocketsController_1.getCoords());
         }), 3000);
         socket.on('disconnect', () => {
             clearInterval(intervals);
